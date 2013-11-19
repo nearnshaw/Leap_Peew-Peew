@@ -1,0 +1,16 @@
+
+	"metadata": {
+		"version": 4.3,
+		"type": "Object",
+		"generator": "ObjectExporter"
+	},
+	"object": {
+		"uuid": "C347170C-4F6F-4452-98E6-6DD1FF83E10F",
+		"name": "PointLight 1",
+		"type": "PointLight",
+		"color": 16777215,
+		"intensity": 5,
+		"distance": 300,
+		"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,634.8226928710938,90,-79.37999725341797,1]
+	}
+}

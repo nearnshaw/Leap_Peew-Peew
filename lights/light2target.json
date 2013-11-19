@@ -1,0 +1,13 @@
+{
+	"metadata": {
+		"version": 4.3,
+		"type": "Object",
+		"generator": "ObjectExporter"
+	},
+	"object": {
+		"uuid": "87B8F609-9970-49C3-9F61-D8C7ED599BB4",
+		"name": "SpotLight 1 Target",
+		"type": "Object3D",
+		"matrix": [1,0,0,0,0,1,0,0,0,0,1,0,-259,39,690,1]
+	}
+}

@@ -1,0 +1,263 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Sample Three.js</title>
+		<style>
+			
+		</style>
+	</head>
+	<body>
+
+		<div id="container">
+			
+
+		</div>
+		<canvas id="canvas" width="1000" height="325" style="display: block;"></canvas>
+
+
+	</body>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+
+	<script type="text/javascript">
+
+	var analyser = null;
+	var array;
+	var interval_check = null;
+	var ctx = null;
+	var oldVals = new Array();
+	oldVals.push(100,100,100,100,100,100,100,100,100,100);
+	var pause = false;
+	var baseCounter = 0;
+	var pi = false;
+	var pifreq = 0;
+	var uu = false;
+	var end = false;
+
+
+	jQuery(document).ready(function () {
+           navigator.getUserMedia = (navigator.getUserMedia ||
+                            navigator.webkitGetUserMedia ||
+                            navigator.mozGetUserMedia ||
+                            navigator.msGetUserMedia);
+          
+
+		if (!navigator.getUserMedia) 
+		{
+		  alert('getUserMedia() is not supported in your browser');
+		} 
+		else 
+		{
+		  
+
+			var context;
+			//window.addEventListener('load', init, false);
+			
+			try {
+				  // Fix up for prefixing
+				  //handle different prefix of the audio context
+				  var AudioContext = AudioContext || webkitAudioContext;
+				  //create the context.
+				  var context = new AudioContext();
+			  	}
+			catch(e) {
+			    	alert('Web Audio API is not supported in this browser');
+			  	}
+
+			navigator.webkitGetUserMedia({audio: true, video: false}, 
+				//success:
+				startStreaming,
+				//fail:
+				function () 
+				{
+					console.log('capturing microphone data failed!');
+					console.log(evt);
+				}
+				);
+
+		}
+
+
+
+		function startStreaming(stream)
+		{
+				  
+	 	  console.log("yeah!");
+
+	 	  
+	 	  	var microphone;
+	 	  	var rafID = null;
+	 	  	analyser = context.createAnalyser();
+	 	  	analyser.smoothingTimeConstant = 0.9;
+	 		//convert audio stream to mediaStreamSource (node)
+			microphone = context.createMediaStreamSource(stream);
+			 //connect microphone to analyser
+	    	microphone.connect(analyser);
+	    	
+
+	    	//analyser.fftSize = 1024;    //con esto el fft tiene el espectro dividido en 512 buckets 
+	    	
+	    	var screenfps = 60;
+	    	base = new Uint8Array(analyser.frequencyBinCount);
+
+	    	//get base
+	    	var getB = setInterval(getBase, Math.round(1000/screenfps));
+
+	    	//get audio
+			//rafID = window.requestAnimationFrame(checkAudio);
+			var waitStart = setTimeout(function()
+  				{
+  					clearInterval(getB);
+  					interval_check = setInterval(checkAudio, Math.round(1000/screenfps));
+  				},5000);
+			
+
+		}
+
+		function getBase()
+		{
+			// get the average, bincount is fftsize / 2
+			array = new Uint8Array(analyser.frequencyBinCount);
+			analyser.getByteFrequencyData(array);
+
+			baseCounter += 1;
+			for (var i = 0; i < base.length; i++)
+			{
+				var holder = base[i]*(baseCounter-1);
+				holder += array[i];
+				base[i] = holder/baseCounter;
+			}
+
+
+		}
+
+		function checkAudio()
+		{
+
+			// get the average, bincount is fftsize / 2
+			array = new Uint8Array(analyser.frequencyBinCount);
+			analyser.getByteFrequencyData(array);
+
+
+
+  			// var hiavg = 0;
+  			var lowavg = 0;
+  			var highest;
+  			var highestN = 280;
+
+  			for (var i = 0; i < array.length; i++)
+			{
+				array[i] = array[i]- base[i];
+			}
+
+  			highest = array[280];
+
+  			// for (var i=200; i < 280; i++)
+  			// {
+  			// 	lowavg += array[i];
+  			// }
+  			// lowavg = lowavg/(280-200);
+
+
+  			
+  			for (var i=180; i<550;i++)
+  			{
+  				if(array[i]>highest)
+  				{
+  					highest = array[i];
+  					highestN = i;
+  				}
+  			}
+
+  			var old = oldVals.shift();  //returns frist element and removes it
+
+
+  			if (pause == false && highestN>280 && highest > old[highestN]*1.2 && highest>60 )
+  			{
+  				console.log("...got pi " + pifreq + " vol " + highest);
+  				pifreq = highestN;
+  				pause = true;
+  				var waitNext = setTimeout(function(){pause = false},700);
+  				var lookforU = setTimeout(function(){pi = true},30);
+  				var piExpire = setTimeout(function(){pi = false},400);
+  				
+  			}
+
+  			if (pi == true && highestN < (pifreq-7) && highest > old[highestN]*1.2 && highest>55 )
+  			{
+  				console.log("...got uu " + highestN + " vol " + highest);
+  				pi = false;
+  				pifreq = highestN;
+  				var lookforEnd = setTimeout(function(){uu = true},30);
+  				var uuExpire = setTimeout(function(){uu = false},400);
+
+  			}
+
+  			if (uu == true && highestN < (pifreq-5) && highest > old[highestN]*1.2 && highest>50 )
+  			{
+  				console.log("PIW! pifreq : " + highestN + " vol " + highest);
+  				uu = false;
+  			}
+
+  			oldVals.push(array);  //adds at the end
+
+  			drawBars(array);
+
+
+
+		}
+
+
+		function drawBars (array) {
+
+			c = document.getElementById("canvas");
+	
+			//get context from canvas for drawing
+			ctx = c.getContext("2d");
+
+			//just show bins with a value over the treshold
+			var threshold = 0;
+			// clear the current state
+			ctx.clearRect(0, 20, c.width, c.height);
+			//the max count of bins for the visualization
+			var maxBinCount = array.length;
+			//space between bins
+			var space = 15;
+
+			//go over each bin
+			for ( var i = 0; i < maxBinCount; i++ ){
+
+				var value = array[i];
+				if (value >= threshold) {				
+
+					//draw bin
+					ctx.fillRect(5 + i * space, c.height - value, 5 , c.height);
+
+					//draw every second bin area in hertz	
+					if (i % 2 == 0) {
+						ctx.font = '12px sans-serif';
+						ctx.textBaseline = 'bottom';
+						ctx.fillText(Math.floor(context.sampleRate / analyser.fftSize * i), i * space + 5, 20);
+					}
+				}
+			}
+		}
+
+
+
+
+
+
+	});
+	
+
+
+	
+		
+
+	</script>
+
+
+
+	
+</html>

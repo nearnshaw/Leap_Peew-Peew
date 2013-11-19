@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Sample Three.js</title>
+		<style>
+			#container {
+				background: #000;
+				width: 400px;
+				height: 300px;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="container">
+
+
+		</div>
+
+	</body>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+
+	<script type="text/javascript">
+
+
+		var context;
+		window.addEventListener('load', init, false);
+		function init() {
+		  try {
+		    // Fix up for prefixing
+		    window.AudioContext = window.AudioContext||window.webkitAudioContext;
+		    context = new AudioContext();
+		  }
+		  catch(e) {
+		    alert('Web Audio API is not supported in this browser');
+		  }
+
+		  navigator.getUserMedia({audio: true}, function(stream) 
+		 {
+			  var microphone = context.createMediaStreamSource(stream);
+			  var filter = context.createBiquadFilter();
+
+			  // microphone -> filter -> destination.
+			  microphone.connect(filter);
+			  filter.connect(context.destination);
+		}, errorCallback);
+
+		}
+
+
+	</script>
+</html>

@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+		<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+
+		<script src="three.min.js"></script>
+		<script src="jquery.js"></script>
+		<script src="jquery-ui.min.js"></script>
+		<script src="js/THREEx.FullScreen.js"></script>
+		<script src="leap.min.js"></script>	
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+	<style>
+		#container {
+						background: #000;
+						width: 100%;
+						height: 100%;
+						margin: 0px;
+						overflow: hidden;
+					}
+	</style>
+
+
+		
+
+	</head>
+		
+	<body>
+
+		<div id="container">
+			
+		</div>
+
+
+
+
+	 </body>
+
+
+	 <script>
+		//-----------------------LEAP STUF---------
+
+
+
+		 var leapvars =
+		 {
+		 	leapX: 50,
+		 	leapY: 50,
+		 	leapZ:100,
+		 	leapDirX:0,
+		 	leapDirY:0,
+		 	leapDirZ:0,
+		 	handRad:50
+		 };
+		
+		 var camDir = new THREE.Vector3(0,0,0);
+		 var lat = 0;
+		 var lon = 0;
+		 var fingerIn = false;
+
+		 var previousFrame;
+
+
+		 var bots = new Array(10);
+
+		 startLeap();
+
+
+	
+
+	function startLeap() 
+	 {
+				 // Setup Leap loop with frame callback function
+			    var controller = new Leap.Controller({enableGestures: true});
+			        var region = new Leap.UI.Region(
+			          [0, 150, -100], 
+			          [200, 250, 100]
+			        );
+
+				controller.addStep(new Leap.UI.Cursor())
+				controller.addStep(region.listener({nearThreshold:50}));
+
+				console.log("leap initialized");
+				
+	
+
+
+
+
+				//BIG loop
+				controller.loop(function(frame, done) {
+		  		// Body of callback function
+
+		  			//overall rotation
+			  		if (typeof previousFrame == 'undefined')
+			  		 {
+			  		 	previousFrame = frame;
+			  		 }
+			  		 else
+			  		 {
+			  			  var rotationAxis = frame.rotationAxis(previousFrame);
+						  var rotationAngle = frame.rotationAngle(previousFrame);
+						  var frameString;
+						  frameString += "Rotation axis: " + rotationAxis + "<br />";
+						  frameString += "Rotation angle: " + rotationAngle.toFixed(2) + " radians<br />";
+						  //console.log(frameString);
+						  
+						  previousFrame = frame;
+					}
+
+
+					
+
+
+					//pointer
+					if (frame.cursorPosition) {
+				      	leap_enabled = true;
+				      	fingerIn = true;
+
+				        var leapPosition = region.mapToXY(frame.cursorPosition, 500, 500);
+
+				        leapvars.leapX = (leapPosition[0]);
+				        leapvars.leapY = (leapPosition[1]);
+				        leapvars.leapZ = leapPosition[2];
+				   
+				      }
+				      else
+				      {
+				      	fingerIn = false;
+				      }
+
+				      if(frame.pointables.length > 0)
+				      {
+				      	
+				      	var pointable = frame.pointables[0];
+
+				      	leapvars.leapDirX = -pointable.direction[0];
+				      	leapvars.leapDirY = -pointable.direction[1];
+				      	leapvars.leapDirZ = pointable.direction[2];
+
+				      	 //console.log("Direction X:" + leapvars.leapDirX + "  Y:" + leapvars.leapDirY + "  Z:" + leapvars.leapDirZ );
+				      	 
+				      }
+				
+
+				      if (frame.hands.length > 0) {
+				      var hand = frame.hands[0];
+
+				      leapvars.handRad = hand.sphereRadius.toFixed(1);
+				      
+				  	  }
+				    done();
+				});
+	}
+
+		 </script>
+
+
+		 <script type="text/javascript">
+		 //------------------------THREE D STUFF
+
+						 // set the scene size
+				var WIDTH = window.innerWidth,
+				  HEIGHT = window.innerHeight;
+
+				// set some camera attributes
+				var VIEW_ANGLE = 45,
+				  ASPECT = WIDTH / HEIGHT,
+				  NEAR = 0.1,
+				  FAR = 10000;
+
+				// get the DOM element to attach to
+				// - assume we've got jQuery to hand
+				var $container = $('#container');
+
+				// create a WebGL renderer, camera
+				// and a scene
+				var renderer = new THREE.WebGLRenderer();
+				var camera =
+				  new THREE.PerspectiveCamera(
+				    VIEW_ANGLE,
+				    ASPECT,
+				    NEAR,
+				    FAR);
+
+				var scene = new THREE.Scene();
+
+				// add the camera to the scene
+				scene.add(camera);
+
+				// the camera starts at 0,0,0
+				// so pull it back
+				camera.position.y = 10;
+
+				camera.eulerOrder = "YXZ";
+
+				// start the renderer
+				renderer.setSize(WIDTH, HEIGHT);
+
+				
+
+
+				// attach the render-supplied DOM element
+				$container.append(renderer.domElement);
+
+				//THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+
+				ray = new THREE.Raycaster();
+                ray.ray.direction.set( 0, -1, 0 );
+
+
+				addStuff();
+				setBlur();
+
+				// create a point light
+				var pointLight =
+				  new THREE.PointLight(0xFFFFFF);
+
+				// set its position
+				pointLight.position.x = 10;
+				pointLight.position.y = 50;
+				pointLight.position.z = 130;
+
+				// add to the scene
+				scene.add(pointLight);
+				scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
+
+
+				// set up the sphere vars
+				var radius = 50,
+				    segments = 16,
+				    rings = 16;
+
+
+				// basic lava ball
+				var lavaTexture = THREE.ImageUtils.loadTexture( 'img/lava.jpg' );
+				var lavaMaterial = new THREE.MeshBasicMaterial( { map: lavaTexture } );
+				var lavaBall = new THREE.Mesh(  new THREE.SphereGeometry(
+				    radius,
+				    segments,
+				    rings), lavaMaterial );
+				lavaBall.position.set(-100, 50, 250);
+				scene.add( lavaBall );	
+
+
+				// SUPER SIMPLE GLOW EFFECT  (not working!!!!!!!)
+				// use sprite because it appears the same from all angles
+				var spriteMaterial = new THREE.SpriteMaterial( 
+				{ 
+					map: new THREE.ImageUtils.loadTexture( 'img/glow.png' ), 
+					useScreenCoordinates: false, alignment: THREE.SpriteAlignment.center, color: 0x0000ff, transparent: false, blending: THREE.AdditiveBlending
+				});
+				var glow = new THREE.Sprite( spriteMaterial );
+				glow.scale.set(150, 150, 1.0);
+				lavaBall.add(glow); // this centers the glow at the mesh
+
+
+
+				//aimMark       (not working!!!!!!!)
+				var aimTexture = THREE.ImageUtils.loadTexture("img/aim1.jpg");
+				var aimMaterial = new THREE.SpriteMaterial({map:aimTexture, useScreenCoordinates: true, alignment: THREE.SpriteAlignment.topLeft });
+				var aimMark = new THREE.Sprite(aimMaterial);
+				aimMark.position.set(window.innerWidth/2, window.innerHeight/2);
+				aimMark.scale.set(8,8,1.0);
+				scene.add(aimMark);
+
+
+
+				
+
+				//needed for looping
+				// shim layer with setTimeout fallback
+				window.requestAnimFrame = (function(){
+				  return  window.requestAnimationFrame       ||
+				          window.webkitRequestAnimationFrame ||
+				          window.mozRequestAnimationFrame    ||
+				          function( callback ){
+				            window.setTimeout(callback, 1000 / 60);
+				          };
+				})();
+
+
+				// usage:
+				// instead of setInterval(render, 16) ....
+
+				//BIG LOOP
+				(function animloop(){
+
+					
+					pointCam();
+					animateStuff();
+					
+					
+
+
+
+
+				  requestAnimFrame(animloop);
+				  renderer.render(scene, camera);
+				})();
+				// place the rAF *before* the render() to assure as close to
+				// 60fps with the setTimeout fallback.
+
+				
+				function onWindowResize() {
+
+                        camera.aspect = window.innerWidth / window.innerHeight;
+                        camera.updateProjectionMatrix();
+
+                        renderer.setSize( window.innerWidth, window.innerHeight );
+
+                }
+
+
+				function pointCam()
+				{
+
+					if (fingerIn)
+					{
+						
+
+						
+
+						if (Math.abs(leapvars.leapDirX)>0.1)
+						{
+							lon -= leapvars.leapDirX;
+
+						}
+						if (Math.abs(leapvars.leapDirY)>0.1)
+						{
+							lat -= leapvars.leapDirY;
+
+						}
+
+
+						lat = Math.max( - 85, Math.min( 85, lat ) );
+						phi = THREE.Math.degToRad( 90 - lat );
+						theta = THREE.Math.degToRad( lon );
+
+						camDir.y = 500 * Math.cos( phi );
+						camDir.x = 500 * Math.sin( phi ) * Math.cos( theta );
+						camDir.z = 500 * Math.sin( phi ) * Math.sin( theta );
+
+						var normalCamDir = camDir.clone();
+						normalCamDir.normalize();
+
+						if(leapvars.leapZ<0)
+						{
+							camera.translateZ(-1);
+							camera.position.y = 10; 
+
+						}
+
+					}
+					camera.lookAt(camDir);
+					//var upvec = new THREE.Vector3(0,0,0);
+					//camera.up = upvec;
+
+					ray.ray.origin = camera.position;
+					ray.ray.direction.set(camDir);
+					var intersections = ray.intersectObjects( bots );
+
+
+					if ( intersections.length > 0 ) {
+
+                        var distance = intersections[ 0 ].distance;
+
+                        if ( distance > 0 && distance < 500 ) {
+
+                         	enlamira();                       
+                        }
+
+                    }
+
+                    console.log("current position - X: " + camera.position.x + " Y: " + camera.position.y + " Z: " + camera.position.z);
+
+				}
+
+
+				function enlamira()
+				{
+					console.log("algo en la mira");
+
+				}
+
+				function addStuff()
+				{
+
+
+
+					
+
+
+
+
+					//FLOOR w TEXTURE
+					var floorTexture = new THREE.ImageUtils.loadTexture( 'img/scrn3.gif' );
+					floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+					floorTexture.repeat.set(60,60);
+					//floorTexture.anisotropy =20;
+					var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture} );
+					var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+					var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+					floor.position.y = -10;
+					floor.position.z = 250;
+					floor.position.x = 250;
+					floor.rotation.x = Math.PI *1.5;
+					//floor.rotation.x = Math.PI / 2;
+					scene.add(floor);
+
+					//ROOF w TEXTURE
+					var roofTexture = new THREE.ImageUtils.loadTexture( 'img/wall3.jpg' );
+					roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping; 
+					roofTexture.repeat.set(20,20);
+					//roofTexture.anisotropy =20;
+					var roofMaterial = new THREE.MeshBasicMaterial( { map: roofTexture} );
+					var roofGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+					var roof = new THREE.Mesh(roofGeometry, roofMaterial);
+					roof.position.y = 100;
+					roof.position.z = 250;
+					roof.position.x = 250;
+					roof.rotation.x = Math.PI / 2;
+					//floor.rotation.x = Math.PI / 2;
+					scene.add(roof);
+
+
+
+
+
+
+					//ROBOTS
+					
+					//textures
+					var botTexture1 = THREE.ImageUtils.loadTexture( 'img/zrobot1.png' );
+					var botMaterial2 = new THREE.SpriteMaterial( { map: botTexture1, useScreenCoordinates: false, color: 0xff0000 } );
+					var botMaterial1 = new THREE.SpriteMaterial( { map: botTexture1, useScreenCoordinates: false } );
+
+					//positions
+					console.log("botlength: " + bots.length);
+					for (var i = 0; i < bots.length; i++)
+					{
+					bots[i] = new THREE.Sprite( botMaterial1 );
+					var posX = Math.random()*1000;
+					var posZ = Math.random()*1000;
+					bots[i].position.set( posX, 10, posZ );
+					bots[i].scale.set( 34, 34, 1.0 ); // imageWidth, imageHeight
+					scene.add( bots[i] );
+					console.log ("bot number " + i);
+					}
+
+					
+
+
+
+
+				}
+
+				function animateStuff()
+				{	
+					var xvec = new THREE.Vector3(0,1,0);
+					lavaBall.rotateOnAxis(xvec,0.01);
+				}
+
+
+
+
+				function setBlur()
+				{
+					composer = new THREE.EffectComposer( renderer );
+					composer.addPass( new THREE.RenderPass( scene, camera ) );
+					
+					// http://devmaster.net/posts/3100/shader-effects-glow-bloom	
+					// http://www.neilblevins.com/cg_education/specular_bloom/specular_bloom.htm
+					var effectHorizBlur = new THREE.ShaderPass( THREE.HorizontalBlurShader );
+					var effectVertiBlur = new THREE.ShaderPass( THREE.VerticalBlurShader );
+					effectHorizBlur.uniforms[ "h" ].value = 2 / window.innerWidth;
+					effectVertiBlur.uniforms[ "v" ].value = 2 / window.innerHeight;
+					effectVertiBlur.renderToScreen = true;
+					
+					composer.addPass( effectHorizBlur );
+					composer.addPass( effectVertiBlur );
+					shaderActive = "blur";
+				}
+
+
+		 </script>
+
+</html>

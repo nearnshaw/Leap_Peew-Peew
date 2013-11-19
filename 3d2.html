@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+		<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+
+		<link rel="stylesheet" href="css/bootstrap.min.css">
+
+		<script src="js/three.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script>
+		<script src="js/jquery-ui.min.js"></script>
+		<script src="js/THREEx.FullScreen.js"></script>
+		<script src="js/THREEx.KeyboardState.js"></script>
+		<script src="js/leap.min.js"></script>	
+		<script src="js/LeapFPControls.js"></script>
+		<script src="js/piwmic.js"></script>
+
+
+		
+
+	<style>
+		#container 
+			{
+				background: #000;
+				width: 100%;
+				height: 100%;
+				margin: 0px;
+				overflow: hidden;
+			}
+		 #hurt 
+		 	{
+		      background-color: red;
+		      display: none;
+		      left: 0;
+		      opacity: 0.15;
+		      width:100%;
+		      height:100%;
+		      pointer-events: none;
+		      position: absolute;
+		      top: 0;
+		      z-index: 1002;
+    		}
+
+    		#hud 
+    		{
+		      bottom: 10px;
+		      position: absolute;
+		      right: 10px;
+		      z-index: 100;
+		      
+		    }
+		    #hud h2
+		    {
+		    	color: #FFCC00;
+		    }
+
+		    #aim
+		    {
+		    	pointer-events: none;
+		    	position: absolute;
+		    	z-index: 100;
+		    	width:14%;
+		    	left:44.3%;
+		    	top:45%;
+		    	
+		    	
+		    }
+
+		    #aimimg
+		    {
+		    	pointer-events: none;
+		    	width:100%;
+		    	
+		    }
+		
+		    .ins h3
+		    {
+		    	text-align: center;
+		    	font-family: "impact";
+		    	color: #006699;
+		    }
+		    #y h3
+		    {
+		    	font-family: "Comic Sans MS";
+		    	color: #006699;
+
+		    }
+		    #y
+		    {
+		    	background-color: #FFEE33;
+		    	padding:30px;
+		    }
+		    #y h4
+		    {
+		    	text-align: center;
+		    	font-family: "impact";
+		    	color: red;
+		    	
+		    }
+		    #instructions
+		    {
+		    	border:8px solid brown;
+		    	
+		    }
+
+		    .ins
+		    {
+		    	padding:5px;
+		    	padding-bottom: 15px;
+		
+		    }
+
+		    #title
+		    {
+		    	vertical-align: center;
+		    	padding-left: 15px;
+
+		    	
+		    }
+
+
+	</style>
+
+
+		
+
+	</head>
+		
+	<body>
+
+		<div id="container">
+			
+		</div>
+		<div id="intro">
+
+			
+			<div class="row">
+				<div class="span6">
+         			<img src="img/gun.jpg">
+
+		 			
+         		</div>
+         		<div class="span9" id="instructions">
+	         		<div class="span3, ins">
+	         			<img src="img/inst1.png" width= "200">
+			 			<h3>1. Aim</h3>
+	         		</div>
+	         		<div class	="span3, ins">
+	         			<img src="img/inst2.png" width= "200" >
+			 			<h3>2. Move forward</h3>
+	         		</div>
+	         		<div class="span3, ins">
+	         			<img src="img/inst3.png" width= "200" >
+			 			<h3>3. Shoot!</h3>
+	         		</div>
+	         	</div>
+         		
+         	</div>
+         	<br>
+         	<div class="row">
+         		<div id="title" class="span6">
+					<img  src="img/title.png" width= "400" >
+				</div>
+	         	<div class="span9" id="y">	
+					<h3>Robot-Mutant-Ninja-Zombies from outer space have invaded... you know, a spaceship or spacestation or whatever. <br> <b>Only you can save the world!<b></h3>
+					<br>
+					<h4 class="center">Click to start</h4>
+				</div>
+			</div>
+
+			
+
+		</div>
+
+
+
+	 </body>
+
+
+	 <script>
+		//-----------------------LEAP STUF---------
+
+				var MOVESPEED =100;
+				var LOOKSPEED = 0.075;
+
+
+				runAnim = true;
+
+
+				// set the scene size
+				var WIDTH = window.innerWidth,
+				  HEIGHT = window.innerHeight;
+
+				// set some camera attributes
+				var VIEW_ANGLE = 45,
+				  ASPECT = WIDTH / HEIGHT,
+				  NEAR = 0.1,
+				  FAR = 10000;
+
+				// get the DOM element to attach to
+				// - assume we've got jQuery to hand
+				var $container = $('#container');
+
+				var clock = new THREE.Clock();
+				var screenfps = 60;
+
+				// create a WebGL renderer, camera
+				// and a scene
+				var renderer = new THREE.WebGLRenderer();
+
+				var camera =
+				  new THREE.PerspectiveCamera(
+				    VIEW_ANGLE,
+				    ASPECT,
+				    NEAR,
+				    FAR);
+
+				var scene = new THREE.Scene();
+
+				// add the camera to the scene
+				scene.add(camera);
+
+				var aimPos;
+				var lasers = [];
+				var laserVec = [];
+				var laserHit = [];
+				var laserMaterial, laserGeo;
+				var LeftMarg, TopMarg, LeftMargPercent, TopMargPercent;
+
+				rayDir = new THREE.Vector3(1, 1, 0);
+				rayC = new THREE.Raycaster(camera.position,rayDir,1,15);
+
+                //rayDir2 = new THREE.Vector3(1, 1, 0);
+				//rayC2 = new THREE.Raycaster(rayDir,rayDir,1,10);
+				
+				var collisions, collisions2, collisions3, hits, win, projector, splight;
+
+                camera.add(rayC);
+
+                var lavaBall, floor, roof, wall1, wall2, wall3, wall4, wall5, wall6, wall7, door, col1, col2, gate, gate2, controls;
+                var obstacles = [];
+                var buttonMove= false;
+				var doorOpen = false;
+
+                var botNum = 10;
+                var bots = new Array(botNum);
+                var health = 1000;
+                var beinghurt = false;  //to control hurt fadein
+
+                var particleGroup, particleAttributes, particleTexture;
+                var totalParticles = 150;
+				var particleRadiusRange = 15;
+
+
+                var botMaterial1, botMaterial2, botMaterial3, botMaterial4, botMaterial5, botMaterialRed;
+
+                var bot_dance_interval = new Array(botNum);
+
+
+                var targetPosX = window.innerWidth/2;
+                var targetPosY = window.innerHeight/2;
+
+
+
+
+		// Initialize and run on document ready
+		$(document).ready(function() {
+			
+			$('#intro').one('click', function(e) {
+				e.preventDefault();
+				$(this).fadeOut();
+				init();
+				
+				
+				
+			});
+		});
+
+
+
+
+
+		 var leapvars =
+		 {
+		 	leapX: 50,
+		 	leapY: 50,
+		 	leapZ:100,
+		 	leapDirX:0,
+		 	leapDirY:0,
+		 	leapDirZ:0,
+		 	handRad:50,
+		 	fingerIn: false
+		 };
+		
+		 
+		 
+
+		 var previousFrame;
+
+
+		 
+
+		 
+
+
+	
+
+	function startLeap() 
+	 {
+				 // Setup Leap loop with frame callback function
+			    var leap = new Leap.Controller({enableGestures: true});
+			        var region = new Leap.UI.Region(
+			          [0, 150, -100], 
+			          [200, 250, 100]
+			        );
+
+				leap.addStep(new Leap.UI.Cursor())
+				leap.addStep(region.listener({nearThreshold:50}));
+
+				console.log("leap initialized");
+
+				//BIG loop
+				leap.loop(function(frame, done) {
+		  		// Body of callback function
+
+					//pointer
+					if (frame.cursorPosition) {
+				      	leap_enabled = true;
+				      	leapvars.fingerIn = true;
+
+				        var leapPosition = region.mapToXY(frame.cursorPosition, window.innerWidth, window.innerHeight);
+
+				        leapvars.leapX = (leapPosition[0]);
+				        leapvars.leapY = (leapPosition[1]);
+				        leapvars.leapZ = leapPosition[2];
+				   
+				      }
+				      else
+				      {
+				      	leapvars.fingerIn = false;
+				      }
+
+				      if(frame.pointables.length > 0)
+				      {
+				      	
+				      	var pointable = frame.pointables[0];
+
+				      	leapvars.leapDirX = -pointable.direction[0];
+				      	leapvars.leapDirY = -pointable.direction[1];
+				      	leapvars.leapDirZ = pointable.direction[2]; 	 
+				      }
+
+				  	var delta = clock.getDelta();
+					controls.update(delta);
+					//moveAim();
+					getCollisionsForward();	
+					
+
+				    done();
+				});
+	}
+
+		
+		 //------------------------THREE D STUFF
+
+		 function init()
+		 {
+
+
+
+					// the camera starts at 0,0,0
+					// so pull it back
+					camera.position.y = 10;
+					camera.position.x = -200;
+					camera.position.z = -200;
+
+					//camera.rotation.order = "YXZ";
+
+					// start the renderer
+					renderer.setSize(WIDTH, HEIGHT);
+
+					projector = new THREE.Projector(); // A helper class for projecting 2D rays (on the screen) into 3D rays (in the virtual world)				
+
+
+					// attach the render-supplied DOM element
+					// Add the canvas to the document
+					renderer.domElement.style.backgroundColor = '#000000'; // easier to see
+					document.body.appendChild(renderer.domElement);
+					
+					THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
+
+
+					
+					controls = new THREE.LeapFirstPersonControls(camera);
+	                controls.movementSpeed = MOVESPEED;
+					controls.lookSpeed = LOOKSPEED;
+					controls.lookVertical = true; 
+					controls.noFly = true;
+					controls.leap
+					controls.leapForward = false;
+
+					
+
+					// create a point light
+					var pointLight1 =
+					  new THREE.PointLight(0xFFFFCC);
+					pointLight1.position.x = 0;
+					pointLight1.position.y = 50;
+					pointLight1.position.z = -300;
+					pointLight1.castShadow = true;
+					pointLight1.intensity = 0.5;
+					scene.add(pointLight1);
+
+					// create a point light
+					var pointLight2 =
+					  new THREE.PointLight(0xFFFFCC);
+					pointLight2.position.x = 1000;
+					pointLight2.position.y = 20;
+					pointLight2.position.z = 700;
+					pointLight2.castShadow = true;
+					pointLight2.intensity = 0.3;
+					scene.add(pointLight2);
+					
+					// create a point light
+					var pointLight3 =
+					  new THREE.PointLight(0xFFFFCC);
+					pointLight3.position.x = 100;
+					pointLight3.position.y = 45;
+					pointLight3.position.z = 250;
+					//pointLight3.castShadow = true;
+					pointLight3.intensity = 0.05;
+					scene.add(pointLight3);
+
+
+					// set up the sphere vars
+					var radius = 40,
+					    segments = 16,
+					    rings = 16;
+
+
+					// basic lava ball
+					var lavaTexture = THREE.ImageUtils.loadTexture( 'img/lava.jpg' );
+					var lavaMaterial = new THREE.MeshBasicMaterial( { map: lavaTexture } );
+					lavaBall = new THREE.Mesh(  new THREE.SphereGeometry(
+					    radius,
+					    segments,
+					    rings), lavaMaterial );
+					lavaBall.position.set(-100, 45, 250);
+					scene.add( lavaBall );	
+
+
+					// SUPER SIMPLE GLOW EFFECT  (not working!!!!!!!)
+					// use sprite because it appears the same from all angles
+					var spriteMaterial = new THREE.SpriteMaterial( 
+					{ 
+						map: new THREE.ImageUtils.loadTexture( 'img/glow.png' ), 
+						useScreenCoordinates: false, alignment: THREE.SpriteAlignment.center, color: 0x0000ff, transparent: false, blending: THREE.AdditiveBlending
+					});
+					var glow = new THREE.Sprite( spriteMaterial );
+					glow.scale.set(130, 130, 1.0);
+					lavaBall.add(glow); // this centers the glow at the mesh
+
+
+					//particles dead bot
+					particleTexture = THREE.ImageUtils.loadTexture( 'img/spark.png' );
+					particleGroup = new THREE.Object3D();
+					particleAttributes = { startSize: [], startPosition: [], randomness: [] };
+	
+
+
+
+					//ROBOTS
+						
+					//textures
+					var botTexture1 = THREE.ImageUtils.loadTexture( 'img/zrobotanim1.png' );
+					var botTexture2 = THREE.ImageUtils.loadTexture( 'img/zrobotanim2.png' );
+					var botTexture3 = THREE.ImageUtils.loadTexture( 'img/zrobotanim3.png' );
+					var botTexture4 = THREE.ImageUtils.loadTexture( 'img/zrobotanim4.png' );
+					var botTexture5 = THREE.ImageUtils.loadTexture( 'img/zrobotanim5.png' );
+
+					//botanim = new TextureAnimator( botTexture1, 5, 1, 5, 120 ); // texture, #horiz, #vert, #total, duration.
+					botMaterialRed = new THREE.SpriteMaterial( { map: botTexture1, useScreenCoordinates: false, color: 0xff0000 } );
+					
+					botMaterial1 = new THREE.SpriteMaterial( { map: botTexture1, useScreenCoordinates: false } );
+					botMaterial2 = new THREE.SpriteMaterial( { map: botTexture2, useScreenCoordinates: false } );
+					botMaterial3 = new THREE.SpriteMaterial( { map: botTexture3, useScreenCoordinates: false } );
+					botMaterial4 = new THREE.SpriteMaterial( { map: botTexture4, useScreenCoordinates: false } );
+					botMaterial5 = new THREE.SpriteMaterial( { map: botTexture5, useScreenCoordinates: false } );
+
+					
+
+
+
+					//positions
+					console.log("botlength: " + bots.length);
+					for (var i = 0; i < bots.length; i++)
+					{
+						var myBot = new THREE.Sprite( botMaterial1 ); 
+						
+						var posX = Math.random()*750;
+						var posZ = Math.random()*750;
+						myBot.position.set( posX, 10, posZ );
+						myBot.scale.set( 30, 35, 1.0 ); 
+						myBot.botVec = new THREE.Vector3(0,0,1);
+						myBot.crash = new THREE.Raycaster(myBot.position, myBot.botVec, 0.5, 10);
+						myBot.dying = false;
+
+						bots[i] = myBot;
+						scene.add( bots[i] );
+						
+
+						
+
+						
+					}
+
+
+
+					// Shoot on click
+					$(document).click(function(e) {
+						e.preventDefault;
+						if (e.which === 1) { // Left click only
+							piwShoot();
+						}
+					});
+
+
+
+					// Set up the brief red flash that shows when you get hurt
+					$('body').append('<div id="hurt"></div>');
+
+					$('body').append('<div id="hud"><h2>Health: <span id="hlth">100</span></h2></div>');
+
+					$('body').append('<div id="aim"><img id="aimimg" src="img/aim2.png"></div>');
+					
+					aimPos = document.getElementById("aim");
+
+
+
+
+
+
+					//WALL Material 1
+					var wallTexture1 = new THREE.ImageUtils.loadTexture( 'img/metal_wall.png' );
+					wallTexture1.wrapS = wallTexture1.wrapT = THREE.RepeatWrapping; 
+					wallTexture1.repeat.set(5,2);
+					var wallMaterial1 = new THREE.MeshLambertMaterial( { map: wallTexture1, side: THREE.DoubleSide} );
+
+
+					//WALL Material 2
+					var wallTexture2 = new THREE.ImageUtils.loadTexture( 'img/tec_wall.png' );
+					wallTexture2.wrapS = wallTexture2.wrapT = THREE.RepeatWrapping; 
+					wallTexture2.repeat.set(2,2);
+					var wallMaterial2 = new THREE.MeshLambertMaterial( { map: wallTexture2} );
+
+					//WALL Material 3
+					var wallTexture3 = new THREE.ImageUtils.loadTexture( 'img/door.png' );
+					wallTexture3.wrapS = wallTexture3.wrapT = THREE.RepeatWrapping; 
+					wallTexture3.repeat.set(4,1);
+					var wallMaterial3 = new THREE.MeshLambertMaterial( { map: wallTexture3} );
+
+					//WALL Material 3
+					var wallTexture3b = new THREE.ImageUtils.loadTexture( 'img/door.jpg' );
+					wallTexture3b.wrapS = wallTexture3b.wrapT = THREE.RepeatWrapping; 
+					wallTexture3b.repeat.set(1,1);
+					var wallMaterial3b = new THREE.MeshLambertMaterial( { map: wallTexture3b} );
+
+
+					//WALL Material 4
+					var wallTexture4 = new THREE.ImageUtils.loadTexture( 'img/cables.png' );
+					wallTexture4.wrapS = wallTexture4.wrapT = THREE.RepeatWrapping; 
+					wallTexture4.repeat.set(5,1);
+					var wallMaterial4 = new THREE.MeshLambertMaterial( { map: wallTexture4, side:THREE.DoubleSide} );
+
+					//WALL Material 5
+					var wallTexture5 = new THREE.ImageUtils.loadTexture( 'img/metal.png' );
+					wallTexture5.wrapS = wallTexture5.wrapT = THREE.RepeatWrapping; 
+					wallTexture5.repeat.set(10,2);
+					var wallMaterial5 = new THREE.MeshLambertMaterial( { map: wallTexture5, side:THREE.DoubleSide} );
+
+					//WALL Material 6
+					var wallTexture6 = new THREE.ImageUtils.loadTexture( 'img/panel.jpg' );
+					wallTexture6.wrapS = wallTexture6.wrapT = THREE.RepeatWrapping; 
+					wallTexture6.repeat.set(1,1);
+					var wallMaterial6 = new THREE.MeshLambertMaterial( { map: wallTexture6, color: 0xff0000} );
+
+					//FLOOR material1
+					var floorTexture = new THREE.ImageUtils.loadTexture( 'img/scrn3.gif' );
+					floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+					floorTexture.repeat.set(60,60);
+					var floorMaterial = new THREE.MeshLambertMaterial( { map: floorTexture, color: 0xCCCC99} );
+
+
+					//Floor material 2
+					var floorTexture2 = new THREE.ImageUtils.loadTexture( 'img/walkway.jpg' );
+					floorTexture2.wrapS = floorTexture2.wrapT = THREE.RepeatWrapping; 
+					floorTexture2.repeat.set(25,3);
+					var floorMaterial2 = new THREE.MeshLambertMaterial( { map: floorTexture2} );
+
+					//Roof material 1
+					var roofTexture = new THREE.ImageUtils.loadTexture( 'img/wall3.jpg' );
+					roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping; 
+					roofTexture.repeat.set(20,20);
+					var roofMaterial = new THREE.MeshLambertMaterial( { map: roofTexture} );
+
+					//Roof material 2
+					var roofTexture2 = new THREE.ImageUtils.loadTexture( 'img/fan_roof.jpg' );
+					roofTexture2.wrapS = roofTexture2.wrapT = THREE.RepeatWrapping; 
+					roofTexture2.repeat.set(20,3);
+					var roofMaterial2 = new THREE.MeshLambertMaterial( { map: roofTexture2} );
+
+
+					//FLOOR main
+					var floorGeometry = new THREE.PlaneGeometry(1000, 1000);
+					floor = new THREE.Mesh(floorGeometry, floorMaterial);
+					floor.position.y = -10;
+					floor.position.z = 250;
+					floor.position.x = 250;
+					floor.rotation.x = Math.PI *1.5;
+					scene.add(floor);
+
+					//ROOF main
+					var roofGeometry = new THREE.PlaneGeometry(1000, 1000);
+					roof = new THREE.Mesh(roofGeometry, roofMaterial);
+					roof.position.y = 100;
+					roof.position.z = 250;
+					roof.position.x = 250;
+					roof.rotation.x = Math.PI / 2;			
+					scene.add(roof);
+
+					//ROOF pasillo
+					var roof2Geometry = new THREE.CubeGeometry(800, 10, 100);
+					roof2 = new THREE.Mesh(roof2Geometry, roofMaterial2);
+					roof2.position.y = 83;
+					roof2.position.z = 700;
+					roof2.position.x = 150;	
+					scene.add(roof2);
+
+					//FLOOR pasillo
+					var floor2Geometry = new THREE.CubeGeometry(800, 10, 100);
+					floor2 = new THREE.Mesh(floor2Geometry, floorMaterial2);
+					floor2.position.y = -12;
+					floor2.position.z = 700;
+					floor2.position.x = 150;	
+					scene.add(floor2);
+
+
+
+					//COL1
+					var col1Geometry = new THREE.CylinderGeometry(35, 20, 130,14,1,1);
+					col1 = new THREE.Mesh(col1Geometry, wallMaterial2);
+					col1.position.x = 0;
+					col1.position.y = 50;
+					col1.position.z = -180;
+					scene.add(col1);
+
+					//COL2
+					var col2Geometry = new THREE.CylinderGeometry(35, 20, 130,14,1,1);
+					col2 = new THREE.Mesh(col2Geometry, wallMaterial2);
+					col2.position.x = 400;
+					col2.position.y = 50;
+					col2.position.z = -220;
+					scene.add(col2);
+
+					//GATE1
+					var gate1Geometry = new THREE.TorusGeometry(90, 40, 10,6,Math.PI*2);
+					gate1 = new THREE.Mesh(gate1Geometry, wallMaterial5);
+					gate1.position.x = 650;
+					gate1.position.y = 40;
+					gate1.position.z = -130;
+					scene.add(gate1);
+
+					//GATE2
+					var gate2Geometry = new THREE.TorusGeometry(85, 40, 10,6,Math.PI*2);
+					gate2 = new THREE.Mesh(gate2Geometry, wallMaterial5);
+					gate2.position.x = 530;
+					gate2.position.y = 35;
+					gate2.position.z = 700;
+					gate2.rotation.y = Math.PI / 2;
+					scene.add(gate2);
+
+
+
+
+					//WALL1
+					var wall1Geometry = new THREE.CubeGeometry(800, 130, 10);
+					wall1 = new THREE.Mesh(wall1Geometry, wallMaterial5);
+					wall1.position.x = 150;
+					wall1.position.y = 50;
+					wall1.position.z = -150;
+					scene.add(wall1);
+
+					//WALL2
+					var wall2Geometry = new THREE.CubeGeometry(800, 130, 10);
+					wall2 = new THREE.Mesh(wall2Geometry, wallMaterial4);
+					wall2.position.x = 150;
+					wall2.position.y = 50;
+					wall2.position.z = 650;
+					scene.add(wall2);
+
+					//WALL3
+					var wall3Geometry = new THREE.CubeGeometry(40, 130, 800);
+					wall3 = new THREE.Mesh(wall3Geometry, wallMaterial3);
+					wall3.position.x = 530;
+					wall3.position.y = 50;
+					wall3.position.z = 250;
+					scene.add(wall3);
+
+
+
+					//WALL4
+					var wall4Geometry = new THREE.PlaneGeometry(1000, 130, 1, 1);
+					wall4 = new THREE.Mesh(wall4Geometry, wallMaterial5);
+					wall4.position.x = 750;
+					wall4.position.y = 50;
+					wall4.position.z = 250;
+					wall4.rotation.y = Math.PI / 2;
+					scene.add(wall4);
+
+					//WALL5
+					var wall5Geometry = new THREE.PlaneGeometry(1000, 130, 1, 1);
+					wall5 = new THREE.Mesh(wall5Geometry, wallMaterial4);
+					wall5.position.x = 250;
+					wall5.position.y = 50;
+					wall5.position.z = 750;
+					scene.add(wall5);
+
+					//WALL6
+					var wall6Geometry = new THREE.PlaneGeometry(1000, 130, 1, 1);
+					wall6 = new THREE.Mesh(wall6Geometry, wallMaterial1);
+					wall6.position.x = 250;
+					wall6.position.y = 50;
+					wall6.position.z = -250;
+					//wall6.rotation.z = Math.PI / 4;
+					scene.add(wall6);
+
+					//WALL7
+					var wall7Geometry = new THREE.CubeGeometry(10, 130, 100);
+					wall7 = new THREE.Mesh(wall7Geometry, wallMaterial2);
+					wall7.position.x = -230;
+					wall7.position.y = 50;
+					wall7.position.z = 700;
+					scene.add(wall7);
+
+					//Button
+					var buttonGeometry = new THREE.CubeGeometry(30,7,7);
+					button = new THREE.Mesh(buttonGeometry, wallMaterial6);
+					button.position.x = -220;
+					button.position.y = 10;
+					button.position.z = 700;
+					scene.add(button);
+
+
+					//PARA CREAR LASERS
+					laserMaterial = new THREE.MeshBasicMaterial({color: 0xFF1100});
+					laserGeo = new THREE.CubeGeometry(0.5, 0.5, 10);
+					//laserGeo = new THREE.CylinderGeometry(1, 0.5, 10, 6,1,false);
+
+					//CIELO
+					var skyGeometry = new THREE.CubeGeometry( 4000, 4000, 4000 );	
+					var skyTexture = new THREE.ImageUtils.loadTexture( "img/sky.jpg" );
+					var skyMaterial = new THREE.MeshBasicMaterial( { map: skyTexture, side:THREE.DoubleSide } );
+					var skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
+					skyBox.position.y=1000;
+					skyBox.position.z= 1000;
+					scene.add( skyBox );
+
+					
+					obstacles.push(wall1, wall2, wall3, wall4, wall5, wall6, wall7, col1, col2, skyBox, gate1, gate2);
+
+					console.log("obstacles" + obstacles);
+
+
+					//LIGHTS
+					var loader = new THREE.ObjectLoader();
+
+					// loader.load( "lights/light1.json", function (object) 
+					// {	
+	    // 				scene.add(object);
+	    // 				console.log("added light");
+					// });
+					loader.load( "lights/light2.json", function (object) 
+					{	
+						splight = object;
+	    				scene.add(object);
+	    				console.log("added light 2");
+					});
+					loader.load( "lights/light2target.json", function (object) 
+					{	
+	    				splight.add(object);
+	    				console.log("added light 2target");
+					});
+					// loader.load( "lights/light3.json", function (object) 
+					// {	
+	    // 				scene.add(object);
+	    // 				console.log("added light 3");
+					// });
+
+					// loader.load( "lights/plight1.json", function (object) 
+					// {	
+	    // 				scene.add(object);
+	    // 				console.log("added light");
+					// });
+
+
+					//BOTDANCE
+
+					for (var i =0; i < bots.length; i++)
+					{
+						var firstStep = Math.floor(Math.random()*5)+1;
+						botDance(bots[i], firstStep);
+					}
+					animate();
+					startLeap();
+
+
+				}
+
+
+				function animate()
+				{
+					if (runAnim) 
+					{
+						requestAnimationFrame(animate);
+					}
+					render();		
+
+				}
+
+			
+
+
+
+
+				
+				function onWindowResize() 
+				{
+
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+
+                    renderer.setSize( window.innerWidth, window.innerHeight );
+
+                }
+
+
+				
+
+				function moveAim()
+				{
+					//$("#aim").left = leapvars.leapDirX;
+					
+					//var aimLeftMarg = window.innerWidth/100*(43 - leapvars.leapDirX*10);
+					LeftMarg = Math.round((43 - leapvars.leapDirX*10)*100)/100;
+					LeftMargPercent = LeftMarg.toString().concat("%");
+
+					TopMarg = Math.round((45 + leapvars.leapDirY*10)*100)/100;
+					TopMargPercent = TopMarg.toString().concat("%");
+
+
+					aimPos.style.left = LeftMargPercent;
+					aimPos.style.top =  TopMargPercent;
+					
+					//console.log(leapvars.leapX);
+
+				}
+
+				function getCollisionsForward()
+				{
+					//GET COLLISIONS
+					//rayC.set(camera.position, camera.rotation);
+					rayDir.applyQuaternion( camera.quaternion );
+					rayC.set(camera.position,rayDir);
+
+					var buttonPush = rayC.intersectObject(button);
+					if(buttonPush.length>0)
+						{
+							console.log("pushing button");
+							buttonMove= true;
+							doorOpen = true;
+						}
+
+					collisions = rayC.intersectObjects(obstacles, true);
+					if(collisions.length>0)
+					{
+						console.log("can´t walk that way");
+						
+						camera.translateZ(1.5);
+						camera.position.y = 10;
+					}
+					else
+					{
+						//controls.canWalk = true;
+							//walk forward
+						if(leapvars.fingerIn)
+						{
+							if(leapvars.leapZ<0)
+							{
+								camera.translateZ(-1);
+								camera.position.y = 10; 
+							}
+						}
+					}
+
+
+				}
+
+
+				function piwShoot()
+				{
+					console.log("PIW");
+
+					var tiro = new THREE.Mesh(laserGeo, laserMaterial);
+					
+					
+					tiro.rotation.set(camera.rotation.x,camera.rotation.y, camera.rotation.z);
+					tiro.position.set(camera.position.x, camera.position.y * 0.6, camera.position.z);
+						//x = Math.PI *1.5;
+
+					//GLOW
+					var lasglow = new THREE.PointLight(0xff0000 ,1 );
+					lasglow.distance = 200;
+					lasglow.width = 60;
+					lasglow.height = 60;
+					//lasglow.castShadow= true;
+					//lasglow.shadowCameraFar = 400;
+					tiro.add(lasglow);
+
+					
+					
+					//FOR MOVING AIM
+					var vector = new THREE.Vector3((LeftMarg+7-50)*window.innerWidth, (50-TopMarg+5)*window.innerHeight, 1);
+					// var vector = new THREE.Vector3((LeftMarg+7)*window.innerWidth, (window.innerHeight- (TopMarg+5)*window.innerHeight), 1);
+					projector.unprojectVector(vector, camera);
+					tiro.ray = new THREE.Ray(
+							camera.position,
+							vector.sub(camera.position).normalize()
+					);
+					
+					tiro.owner = camera;
+					lasers.push(tiro);
+					scene.add(tiro);
+
+					var laserDir = new THREE.Vector3(0,1,0);
+ 					laserDir.applyQuaternion(tiro.quaternion);
+ 					var rayClaser = new THREE.Raycaster(tiro.position, laserDir, 0.5, 15);
+					laserVec.push(laserDir);
+					laserHit.push(rayClaser);
+					
+
+ 
+					return tiro;
+		
+				}
+
+
+			
+				function render()
+				{	
+
+					var xvec = new THREE.Vector3(0,1,0);
+					lavaBall.rotateOnAxis(xvec,0.01);
+
+
+					//setBlur();    NEVER WORKED, but all code is backup  func + imports
+					//setDotScreen();     NEVER WORKED, but all code is backup      func + imports
+
+
+
+					
+					// Update lasers. Walk backwards through thise list so we can remove items
+					for (var i = lasers.length-1; i >= 0; i--) 
+					{
+						if(lasers[i].position.x>2000 || lasers[i].position.x<-2000 || lasers[i].position.z>2000 || lasers[i].position.z<-2000)
+						{
+							scene.remove(lasers[i]);
+							lasers.splice(i, 1);
+							laserVec.splice(i, 1);
+							laserHit.splice(i, 1);
+						}
+						else
+						{
+
+							//move forward!
+							lasers[i].translateZ(-12);
+
+							laserHit[i].set(lasers[i].position, laserVec[i]);
+
+							collisions3 = laserHit[i].intersectObjects(obstacles,true).length;
+							hits = laserHit[i].intersectObjects(bots);
+							win = laserHit[i].intersectObject(lavaBall);
+
+
+							if(collisions3>0)
+							{
+								scene.remove(lasers[i]);
+								lasers.splice(i, 1);
+								laserVec.splice(i, 1);
+								laserHit.splice(i, 1);
+								console.log("hit something!");
+							}
+							if(hits.length>0)
+							{
+								
+								
+								//remove laser
+								scene.remove(lasers[i]);
+								lasers.splice(i, 1);
+								laserVec.splice(i, 1);
+								laserHit.splice(i, 1);
+
+								//kill bot
+								var killedBot = bots.indexOf(hits[0].object);
+								console.log("HIT A BOT!! " +  killedBot );
+								bots[killedBot].dying = true;
+								botSparks(killedBot);
+								//botDie(killedBot);
+								var die = setTimeout( function(){botDie(killedBot)},2000);
+							}
+							if(win.length>0)
+							{
+								alert("Yey, you won!");
+							}
+						}
+					}
+
+					hurtYou();
+					walkToYou();
+
+					sparkUpdate();
+
+					if (buttonMove)
+					{
+						if (button.position.x < -228)
+							{
+								buttonMove = false;
+								console.log("done pushing");
+							}
+						button.position.x -=0.2;
+					}
+
+					if (doorOpen)
+					{
+						if (wall3.position.z < -300)
+							{
+								doorOpen = false;
+								console.log("done opening door");
+							}
+						wall3.position.z -=0.05;
+					}
+					//loop back and run this func again
+					renderer.render(scene, camera);
+					// place the rAF *before* the render() to assure as close to 60fps with the setTimeout fallback.
+				}
+
+				function botDie (killedBot) 
+				{
+					//cool bot animation
+					console.log("removing bot " + killedBot);
+					scene.remove(bots[killedBot]);
+					bots.splice(killedBot,1);
+					var noSparks = setTimeout( function(){scene.remove(particleGroup)},700);
+					
+				}
+				function botSparks(killedBot)
+				{
+					for( var i = 0; i < totalParticles; i++ ) 
+					{
+					    var spriteMaterial = new THREE.SpriteMaterial( { map: particleTexture, useScreenCoordinates: false, color: 0xffffff } );
+						
+						var sprite = new THREE.Sprite( spriteMaterial );
+						sprite.scale.set( 7, 7, 1.0 ); // imageWidth, imageHeight
+						sprite.position.set( Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5 );
+						// for a spherical shell:
+						sprite.position.setLength( particleRadiusRange * (Math.random() * 0.2 + 0.8) );
+						
+						// sprite.color.setRGB( Math.random(),  Math.random(),  Math.random() ); 
+						sprite.material.color.setHSL( Math.random()*4/10, 0.9, 0.85 ); 
+						
+						// sprite.opacity = 0.80; // translucent particles
+						sprite.material.blending = THREE.AdditiveBlending; // "glowing" particles
+						
+						particleGroup.add( sprite );
+						// add variable qualities to arrays, if they need to be accessed later
+						particleAttributes.startPosition.push( sprite.position.clone() );
+						particleAttributes.randomness.push( Math.random() );
+					}
+					particleGroup.position.x = bots[killedBot].position.x;
+					particleGroup.position.z = bots[killedBot].position.z;
+					particleGroup.position.y = 12;
+					scene.add( particleGroup );
+
+				}
+
+				function sparkUpdate()
+				{
+					var time = 4 * clock.getElapsedTime();
+	
+					for ( var c = 0; c < particleGroup.children.length; c ++ ) 
+					{
+						var sprite = particleGroup.children[ c ];
+
+						// particle wiggle
+						// var wiggleScale = 2;
+						// sprite.position.x += wiggleScale * (Math.random() - 0.5);
+						// sprite.position.y += wiggleScale * (Math.random() - 0.5);
+						// sprite.position.z += wiggleScale * (Math.random() - 0.5);
+						
+						// pulse away/towards center
+						// individual rates of movement
+						var a = particleAttributes.randomness[c] + 1;
+						var pulseFactor = Math.sin(a * time) * 0.1 + 0.9;
+						sprite.position.x = particleAttributes.startPosition[c].x * pulseFactor;
+						sprite.position.y = particleAttributes.startPosition[c].y * pulseFactor;
+						sprite.position.z = particleAttributes.startPosition[c].z * pulseFactor;	
+					}
+
+					// rotate the entire group
+					// particleGroup.rotation.x = time * 0.5;
+					particleGroup.rotation.y = time * 0.75;
+					// particleGroup.rotation.z = time * 1.0;
+
+				}
+
+				function hurtYou()
+				{
+					for (var i = 0; i < bots.length; i++)
+					{
+						if (distance2D(bots[i].position.x, bots[i].position.z, camera.position.x, camera.position.z) < 25 && bots[i].dying == false) 
+						{
+							
+							health -= 1;
+							if (!beinghurt)
+							{
+								beingHurt = true;
+
+								var wait = setTimeout(function(){ beingHurt = false;}, 1300);
+								$('#hurt').fadeIn(75);
+								// ... hurt the player ...
+								$('#hurt').fadeOut(150);
+								console.log("getting hurt by bot! " + health);
+								$("#hud").innerHTML = "Health: " + health;
+							}
+						}
+					}
+				}
+
+				function walkToYou()
+				{
+					//getDir
+					//update their direction
+					for (var i = 0; i < bots.length; i++)
+					{ 
+						if(!bots[i].dying)
+						{
+							//lookatyou
+							bots[i].lookAt(camera.position);
+
+							bots[i].botVec.applyQuaternion(bots[i].quaternion);
+
+							bots[i].crash.set(bots[i].position, bots[i].botVec);
+
+							collisions2 = bots[i].crash.intersectObjects(obstacles,true).length;
+
+							if(collisions2>0)
+							{
+								//console.log("collided " + collisions2);
+								bots[i].translateZ(-5);
+							}
+							else if (collisions2 == 0)
+							{
+								//walk 
+							 	bots[i].translateZ(0.3);
+							}
+						}
+					}
+				}
+
+				function botDance(bot, step)
+				{
+					if (!bot.dying)
+					{
+						if( step < 5)
+						{
+							nextStep = step +1;
+						}
+						else
+						{
+							nextStep = 1;
+						}
+							
+						var mat = "botMaterial";
+						bot.material = eval(mat.concat(nextStep)); //weird workarround because if not it used the object mat
+						var delay =	Math.floor((Math.random()*50)+400);
+						var runAgain = setTimeout(function(){botDance(bot, nextStep)},delay );
+					}
+					else
+					{
+						bot.material = botMaterialRed;
+					}
+				}
+
+				
+
+				function distance2D(aX, aZ, bX, bZ)
+				{
+					var dx = Math.abs(aX-bX);
+					var dy = Math.abs(aZ-bZ);
+					return Math.sqrt(Math.pow(dx,2)+Math.pow(dy,2));
+				}
+
+		 </script>
+
+</html>

@@ -1,0 +1,18 @@
+{
+	"metadata": {
+		"version": 4.3,
+		"type": "Object",
+		"generator": "ObjectExporter"
+	},
+	"object": {
+		"uuid": "606B028C-42D9-4DDE-8E76-CD9D9249B539",
+		"name": "SpotLight 2",
+		"type": "SpotLight",
+		"color": 16777215,
+		"intensity": 1,
+		"distance": 0,
+		"angle": 0.354,
+		"exponent": 10,
+		"matrix": [1.9800000190734863,0,0,0,0,1.9800000190734863,0,0,0,0,1.9800000190734863,0,341.7998352050781,191.4351043701172,-189.00794982910156,1]
+	}
+}
