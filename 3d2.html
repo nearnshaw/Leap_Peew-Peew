@@ -44,7 +44,7 @@
 		      z-index: 1002;
     		}
 
-    		#hud 
+    		#health 
     		{
 		      bottom: 10px;
 		      position: absolute;
@@ -52,10 +52,48 @@
 		      z-index: 100;
 		      
 		    }
-		    #hud h2
+		    #health h2
 		    {
 		    	color: #FFCC00;
 		    }
+
+		    #subSpace
+		    {
+		    	position: absolute;
+		    	bottom: 40px;
+		    	width: 100%;
+		    	z-index: 100;
+		    	pointer-events: none;
+
+		    }
+
+		     #subs
+		    {
+		    	margin-right: auto;
+		    	margin-left: auto;
+		      	pointer-events: none;
+		      	text-align:center;
+		      z-index: 100;
+		      max-width: 70%;
+		      
+		      }
+
+		    #subs h2
+		    {
+		    	color:#66FFFF;
+		    	size:20px;
+		    	font: Lucida Grande, sans-serif;
+
+		    }
+
+	    	#subs .yousay
+		    {
+		    	color:#FFFF00;
+		   	   	font: Lucida Grande, sans-serif;
+		   	   	padding-top:30px;
+
+		    }
+
 
 		    #aim
 		    {
@@ -240,25 +278,31 @@
 
                 camera.add(rayC);
 
-                var lavaBall, floor, roof, wall1, wall2, wall3, wall4, wall5, wall6, wall7, door, col1, col2, gate, gate2, controls;
+                var lavaBall, floor, roof, wall1, wall2, wall3, wall4, wall5, wall6, wall7, door, col1, col2, gate, gate2, controls, buttonArea;
+                var ballLight;
                 var obstacles = [];
                 var buttonMove= false;
 				var doorOpen = false;
 
-                var botNum = 10;
+                var botNum = 15;
                 var bots = new Array(botNum);
+                var obi;
                 var health = 1000;
                 var beinghurt = false;  //to control hurt fadein
 
                 var particleGroup, particleAttributes, particleTexture;
-                var totalParticles = 150;
+                
 				var particleRadiusRange = 15;
 
 
-                var botMaterial1, botMaterial2, botMaterial3, botMaterial4, botMaterial5, botMaterialRed;
+                var botMaterial1, botMaterial2, botMaterial3, botMaterial4, botMaterial5, botMaterialRed, obiMaterial1, obiMaterial2;
 
                 var bot_dance_interval = new Array(botNum);
 
+                var chat = [];
+                var chatIndex = 0;
+                var havingConversation = false;
+                var obiWind;
 
                 var targetPosX = window.innerWidth/2;
                 var targetPosY = window.innerHeight/2;
@@ -433,6 +477,12 @@
 					//pointLight3.castShadow = true;
 					pointLight3.intensity = 0.05;
 					scene.add(pointLight3);
+					
+					//ball light
+					ballLight = new THREE.PointLight(0xFF0000);
+					ballLight.position.set(-100, 45, 250);
+					ballLight.intensity = 0;
+					scene.add(ballLight);
 
 
 					// set up the sphere vars
@@ -469,6 +519,17 @@
 					particleGroup = new THREE.Object3D();
 					particleAttributes = { startSize: [], startPosition: [], randomness: [] };
 	
+					//OBI
+					var obiTexture1 = THREE.ImageUtils.loadTexture( 'img/obi1.png' );
+					var obiTexture2 = THREE.ImageUtils.loadTexture( 'img/obi2.png' );
+					obiMaterial1 = new THREE.SpriteMaterial( { map: obiTexture1, useScreenCoordinates: false } );
+					obiMaterial2 = new THREE.SpriteMaterial( { map: obiTexture2, useScreenCoordinates: false } );
+					obi = new THREE.Sprite( obiMaterial1 ); 
+						
+					obi.position.set(500, 10, -220 );
+						obi.scale.set( 30, 35, 1.0 ); 
+						obi.talking = false;
+						scene.add( obi );
 
 
 
@@ -532,9 +593,11 @@
 					// Set up the brief red flash that shows when you get hurt
 					$('body').append('<div id="hurt"></div>');
 
-					$('body').append('<div id="hud"><h2>Health: <span id="hlth">100</span></h2></div>');
+					$('body').append('<div id="health"><h2>Health:100</h2></div>');
 
 					$('body').append('<div id="aim"><img id="aimimg" src="img/aim2.png"></div>');
+
+					$('body').append('<div id="subSpace"><div id="subs"></div></div>');
 					
 					aimPos = document.getElementById("aim");
 
@@ -612,6 +675,9 @@
 					roofTexture2.repeat.set(20,3);
 					var roofMaterial2 = new THREE.MeshLambertMaterial( { map: roofTexture2} );
 
+					//invisible material
+					var invisibleMaterial = new THREE.MeshLambertMaterial({color:0xff0000, transparent: true, opacity:0});
+
 
 					//FLOOR main
 					var floorGeometry = new THREE.PlaneGeometry(1000, 1000);
@@ -667,7 +733,7 @@
 
 					//GATE1
 					var gate1Geometry = new THREE.TorusGeometry(90, 40, 10,6,Math.PI*2);
-					gate1 = new THREE.Mesh(gate1Geometry, wallMaterial5);
+					gate1 = new THREE.Mesh(gate1Geometry, wallMaterial1);
 					gate1.position.x = 650;
 					gate1.position.y = 40;
 					gate1.position.z = -130;
@@ -675,7 +741,7 @@
 
 					//GATE2
 					var gate2Geometry = new THREE.TorusGeometry(85, 40, 10,6,Math.PI*2);
-					gate2 = new THREE.Mesh(gate2Geometry, wallMaterial5);
+					gate2 = new THREE.Mesh(gate2Geometry, wallMaterial1);
 					gate2.position.x = 530;
 					gate2.position.y = 35;
 					gate2.position.z = 700;
@@ -739,7 +805,7 @@
 
 					//WALL7
 					var wall7Geometry = new THREE.CubeGeometry(10, 130, 100);
-					wall7 = new THREE.Mesh(wall7Geometry, wallMaterial2);
+					wall7 = new THREE.Mesh(wall7Geometry, wallMaterial1);
 					wall7.position.x = -230;
 					wall7.position.y = 50;
 					wall7.position.z = 700;
@@ -753,6 +819,21 @@
 					button.position.z = 700;
 					scene.add(button);
 
+					//buttonArea
+					var buttonAreaGeometry = new THREE.CubeGeometry(40,30,100);
+					buttonArea = new THREE.Mesh(buttonAreaGeometry, invisibleMaterial);
+					buttonArea.position.x = -220;
+					buttonArea.position.y = 10;
+					buttonArea.position.z = 700;
+					scene.add(buttonArea);
+
+					//skywall
+					var skywallGeometry = new THREE.CubeGeometry(10, 130, 1000);
+					skywall = new THREE.Mesh(skywallGeometry, invisibleMaterial);
+					skywall.position.x = -250;
+					skywall.position.y = 50;
+					skywall.position.z = 250;
+					scene.add(skywall);
 
 					//PARA CREAR LASERS
 					laserMaterial = new THREE.MeshBasicMaterial({color: 0xFF1100});
@@ -769,7 +850,7 @@
 					scene.add( skyBox );
 
 					
-					obstacles.push(wall1, wall2, wall3, wall4, wall5, wall6, wall7, col1, col2, skyBox, gate1, gate2);
+					obstacles.push(wall1, wall2, wall3, wall4, wall5, wall6, wall7, col1, col2, skyBox, gate1, gate2, skywall,buttonArea);
 
 					console.log("obstacles" + obstacles);
 
@@ -875,16 +956,18 @@
 					rayDir.applyQuaternion( camera.quaternion );
 					rayC.set(camera.position,rayDir);
 
-					var buttonPush = rayC.intersectObject(button);
+					var buttonPush = rayC.intersectObject(buttonArea);
 					if(buttonPush.length>0)
 						{
 							console.log("pushing button");
 							buttonMove= true;
 							doorOpen = true;
+							obi.position.set(300,10,200);
+							//relocate bots
 						}
 
 					collisions = rayC.intersectObjects(obstacles, true);
-					if(collisions.length>0)
+					if(collisions.length>0 && havingConversation == false)
 					{
 						console.log("can´t walk that way");
 						
@@ -1016,13 +1099,22 @@
 								var killedBot = bots.indexOf(hits[0].object);
 								console.log("HIT A BOT!! " +  killedBot );
 								bots[killedBot].dying = true;
-								botSparks(killedBot);
+								botSparks(bots[killedBot], 150);
 								//botDie(killedBot);
 								var die = setTimeout( function(){botDie(killedBot)},2000);
 							}
 							if(win.length>0)
 							{
-								alert("Yey, you won!");
+								//alert("Yey, you won!");
+								var end = setInterval (apocalipse,100);
+								var mySparks =  setTimeout( function(){botSparks(camera, 50)},4000);
+								var oops =  setTimeout( function(){document.getElementById("subs").innerHTML = "<h2> hmm, my bad</h2>";},1000);
+								var end =  setTimeout( function(){alert("thanks for playing!")},20000);
+
+
+								
+
+
 							}
 						}
 					}
@@ -1049,12 +1141,147 @@
 								doorOpen = false;
 								console.log("done opening door");
 							}
-						wall3.position.z -=0.05;
+						wall3.position.z -=0.1;
 					}
+
+					if (distance2D(obi.position.x, obi.position.z, camera.position.x, camera.position.z) < 150  && havingConversation== false) 
+						{
+							//conversationMode
+							if (chatIndex<1)
+							{
+								console.log("chat 1 started");
+								havingConversation = true;
+								conversation(1);
+							}
+							else if (chatIndex>25)
+							{
+
+								console.log("chat 2 started");
+								havingConversation = true;
+								chatIndex = 31	;
+								conversation(2);
+							}
+							
+						}
+
 					//loop back and run this func again
 					renderer.render(scene, camera);
 					// place the rAF *before* the render() to assure as close to 60fps with the setTimeout fallback.
 				}
+
+				function apocalipse()
+				{
+					ballLight.intensity += 0.1;
+				}
+
+				function conversation(conv)
+				{
+					//chat = [];
+					//chatIndex = 0;
+					if(conv == 1)
+					{
+						chat.push(["I knew you would come",1000,1]);
+						chat.push(["my senses told me so", 1000,1]);
+						chat.push(["who are you?", 2000,2]);
+						chat.push(["you are the one that will save us",3000,1]);
+						chat.push(["I know who I am! I asked who YOU are!",2000,2]);
+						chat.push(["You already know",2000,1]);
+						chat.push(["You also already know how to use your true power",2000,1]);
+						chat.push(["All you need to do is say PEEW! Say it out loud and high pitched!",6000,1]);
+						chat.push(["That is soooo gay!",3000,2]);
+						chat.push(["SAY IT! Say it or we will all perish!",2000,1]);
+						chat.push(["Do I reaaaly have to?",3000,2]);
+						chat.push(["Come on, say it like a MAN!",2000,1]);
+						chat.push(["By the way... maybe you need to allow your browser permissions to use the mic",5000,1]);
+
+						chat.push(["Good! now you are ready to take on the army of Mutant Kung-Foo robot zombies!",5000,1]);
+						chat.push(["Werent they Mutant Ninja robot zombies?",3500,2]);
+						chat.push(["That is what I said",1500,1]);
+						chat.push(["Nono, you said Kung-Foo!",1500,2]);
+						chat.push(["Right",1000,1]);
+						chat.push(["But they are Ninja!",1500,2]);
+						chat.push(["I am not following",1500,1]);
+						chat.push(["Kung-foo and Ninjitsu are two different martial arts",5000,2]);
+						chat.push(["This is the future... the lines are pretty blurry by now. They are the same",5000,1]);
+						chat.push(["Hmm well it would still be historically incorrect... some people might even feel offended by",4000,2]);
+						chat.push(["THE WORLD IS IN PERIL! GO, FOR CHRIST SAKE! GO!",5000,1]);
+						chat.push(["Arent you coming with me? My life will be in danger and you could be of help",4000,2]);
+						chat.push(["No",1000,1]);
+						chat.push(["I need you!",2000,2]);
+						chat.push(["Mind your own business",4000,1]);
+						chat.push(["Go!",4000,1]);
+
+						chat.push([" ",3000,1]);
+						chat.push([" ",3000,3]);
+					}
+					else if (conv == 2)
+					{
+						chat.push(["Well done!",1000,1]);
+						chat.push(["Now you must destroy that thing there!",4000,1]);
+						chat.push(["Why what is it?",2000,2]);
+						chat.push(["How the hell would I know??",2000,1]);
+						chat.push(["But it is there for some reason, and you can shoot...  it makes sense",6000,1]);
+						chat.push(["Hey by the way, I wanted to ask...",5000,2]);
+						chat.push(["How can a robot also be a mutant? It has no genes to mutate...",6000,2]);
+						chat.push(["And on that matter, how can a zombi be ninja? It hardly has any control over its body",6000,2]);
+						chat.push(["You ask way too many questions...",4000,1]);
+						chat.push(["Just shoot already!",5000,1]);
+						chat.push(["Whatever that thing is.. I bet it will look cool when it blows up!",6000,1]);
+						chat.push(["By the way, shoot it a bunch of times because it sometimes is a bit glitchy!",5000,1]);
+						
+						chat.push(["Promise the explosion will not kill us?",6000,2]);
+						chat.push(["Yeah...",6000,1]);
+						chat.push([" ",3000,1]);
+
+					}
+
+					//stay still
+					//chatIndex = 0;
+					obiWind = setInterval(obiDance, 500);
+					speak();
+				}
+
+				function speak()
+				{	
+					var phrase = chat[chatIndex];
+
+					if (phrase[2] ==1)
+					{
+						document.getElementById("subs").innerHTML = "<h2>" + phrase[0] +"</h2>";
+					}
+					else if (phrase[2] ==2)
+					{
+						document.getElementById("subs").innerHTML = '<h2 class="yousay">' + phrase[0] +"</h2>";
+						console.log('<h2 id="yousay">' + phrase[0] +"</h2>");
+					}	
+					else if (phrase[2] ==3)
+					{
+						//clearInterval(obiWind);
+						
+						havingConversation = false;
+						console.log("conversation over");
+						return false;
+					}
+
+					chatIndex += 1;
+					console.log(chatIndex + " out of " + chat.length);
+					setTimeout(speak, phrase[1]);
+
+				}
+
+				function obiDance()
+				{
+					if (obi.material == obiMaterial1)
+					{
+						obi.material = obiMaterial2;
+					}
+					else
+					{
+						obi.material = obiMaterial1;
+					}
+				}
+
+
 
 				function botDie (killedBot) 
 				{
@@ -1065,7 +1292,7 @@
 					var noSparks = setTimeout( function(){scene.remove(particleGroup)},700);
 					
 				}
-				function botSparks(killedBot)
+				function botSparks(killedBot, totalParticles)
 				{
 					for( var i = 0; i < totalParticles; i++ ) 
 					{
@@ -1088,8 +1315,8 @@
 						particleAttributes.startPosition.push( sprite.position.clone() );
 						particleAttributes.randomness.push( Math.random() );
 					}
-					particleGroup.position.x = bots[killedBot].position.x;
-					particleGroup.position.z = bots[killedBot].position.z;
+					particleGroup.position.x = killedBot.position.x;
+					particleGroup.position.z = killedBot.position.z;
 					particleGroup.position.y = 12;
 					scene.add( particleGroup );
 
@@ -1132,8 +1359,8 @@
 						if (distance2D(bots[i].position.x, bots[i].position.z, camera.position.x, camera.position.z) < 25 && bots[i].dying == false) 
 						{
 							
-							health -= 1;
-							if (!beinghurt)
+							health -= 2;
+							if (beinghurt == false)
 							{
 								beingHurt = true;
 
@@ -1142,7 +1369,13 @@
 								// ... hurt the player ...
 								$('#hurt').fadeOut(150);
 								console.log("getting hurt by bot! " + health);
-								$("#hud").innerHTML = "Health: " + health;
+							}
+							var myHealth = Math.floor(health/10);
+							document.getElementById("health").innerHTML = "<h2>Health: " + myHealth + "</h2>";
+							if(myHealth < 0)
+							{
+								document.getElementById("subs").innerHTML = "<h2> You really suck at this</h2>";
+
 							}
 						}
 					}
