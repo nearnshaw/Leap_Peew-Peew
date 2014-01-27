@@ -16,7 +16,8 @@
 		<script src="js/THREEx.KeyboardState.js"></script>
 		<script src="js/leap.min.js"></script>	
 		<script src="js/LeapFPControls.js"></script>
-		<script src="js/piwmic.js"></script>
+		<script src="js/dat.gui.min.js"></script>
+		
 
 
 		
@@ -141,6 +142,7 @@
 		    #instructions
 		    {
 		    	opacity: 0;
+		    	margin-top: 5%;
 		    	
 		    }
 
@@ -210,7 +212,7 @@
 	         		</div>
 	         		<div class="span4">
 	         			<img src="img/inst3.png" >
-			 			<h3>3. Shoot!</h3>
+			 			<h3 id="youshoot">3. Shoot!</h3>
 	         		</div>
 	    </div>
 				
@@ -228,7 +230,22 @@
 
 
 				runAnim = true;
+				var briefing = true;  //game not started yet, isntructions only
 
+				//for DAT.GUI
+				var micVars = function()
+				{
+					this.baseSize = 600;
+					this.peeSensitivity = 26;
+					this.wwSensitivity = 15;
+					this.peevswwSpread = 40;
+				}
+				var micV = new micVars();
+				var gui = new dat.GUI();
+				gui.add(micV, "baseSize");
+				gui.add(micV, "peeSensitivity");
+				gui.add(micV, "wwSensitivity");
+				gui.add(micV, "peevswwSpread");
 
 				// set the scene size
 				var WIDTH = window.innerWidth,
@@ -280,7 +297,7 @@
 
                 camera.add(rayC);
 
-                var lavaBall, floor, roof, wall1, wall2, wall3, wall4, wall5, wall6, wall7, door, col1, col2, gate, gate2, controls, buttonArea, lavaBallArea;
+                var lavaBall, floor, roof, wall1, wall2, wall3, wall4, wall5, wall6, wall7, door, col1, col2, gate, gate2, controls, buttonArea, lavaBallArea, glow;
                 var ballLight;
                 var obstacles = [];
                 var buttonMove= false;
@@ -293,7 +310,7 @@
 
                 var particleGroup, particleAttributes, particleTexture;
                 
-				var particleRadiusRange = 15;
+				//var particleRadiusRange = 15;
 
 
                 var botMaterial1, botMaterial2, botMaterial3, botMaterial4, botMaterial5, botMaterialRed, bigBotMaterial1, bigBotMaterial2, bigBotMaterial3, obiMaterial1, obiMaterial2;
@@ -346,24 +363,31 @@
 
 		// Initialize and run on document ready
 		$(document).ready(function() {
+			gui.close();
 
 			$('#intro').one('click', function(e) {
 				
 					e.preventDefault();
-					
 					$(this).fadeOut();
 					$("#instructions").fadeTo("slow",1);
-					
+					testAudio();
 				
 			});
 			$('#instructions').one('click', function(e) {
 				e.preventDefault();
 				$(this).fadeOut();
+				briefing = false;
+				gui.close();
 				init();
 			});
 		});
 
-
+		//in instructions, check that peew works
+		function testAudio()
+		{
+			
+			
+		}
 
 
 
@@ -404,8 +428,7 @@
 				leap.addStep(new Leap.UI.Cursor())
 				leap.addStep(region.listener({nearThreshold:50}));
 
-				console.log("leap initialized");
-
+			
 				//BIG loop
 				leap.loop(function(frame, done) {
 		  		// Body of callback function
@@ -861,7 +884,7 @@
 						map: new THREE.ImageUtils.loadTexture( 'img/glow.png' ), 
 						useScreenCoordinates: false, alignment: THREE.SpriteAlignment.center, color: 0x0000ff, transparent: false, blending: THREE.AdditiveBlending
 					});
-					var glow = new THREE.Sprite( spriteMaterial );
+					glow = new THREE.Sprite( spriteMaterial );
 					glow.scale.set(130, 130, 1.0);
 					lavaBall.add(glow); // this centers the glow at the mesh
 
@@ -889,11 +912,7 @@
 					//LIGHTS
 					var loader = new THREE.ObjectLoader();
 
-					// loader.load( "lights/light1.json", function (object) 
-					// {	
-	    // 				scene.add(object);
-	    // 				console.log("added light");
-					// });
+			
 					loader.load( "lights/light2.json", function (object) 
 					{	
 						splight = object;
@@ -977,7 +996,8 @@
 							doorOpen = true;
 							obi.position.set(300,10,200);
 							addBots(botPos2);
-							//console.log("pushing button");
+							scene.remove(buttonArea);
+							
 						}
 					}
 
@@ -986,7 +1006,7 @@
 					{
 						camera.translateZ(1.1);
 						camera.position.y = 10;
-						console.log("can´t walk that way");	
+						//console.log("can´t walk that way");	
 					}
 					else
 					{
@@ -996,7 +1016,7 @@
 							{
 								camera.translateZ(-1);
 								camera.position.y = 10;
-								//console.log("X: " + camera.position.x + " Z: " + camera.position.z); 
+								
 							}
 						}
 					}
@@ -1007,46 +1027,57 @@
 				{
 					//console.log("PIW");
 
-					var tiro = new THREE.Mesh(laserGeo, laserMaterial);
-					
-					
-					tiro.rotation.set(camera.rotation.x,camera.rotation.y, camera.rotation.z);
-					tiro.position.set(camera.position.x, camera.position.y * 0.6, camera.position.z);
-						//x = Math.PI *1.5;
+					if (briefing == true)
+					{
+						console.log("in briefing");
+						$("#youshoot").css("color","red");
+						var toNormal = myVar=setTimeout(function(){$('#youshoot').css('color','#006699')},300);
 
-					//GLOW
-					var lasglow = new THREE.PointLight(0xff0000 ,1 );
-					lasglow.distance = 200;
-					lasglow.width = 60;
-					lasglow.height = 60;
-					//lasglow.castShadow= true;
-					//lasglow.shadowCameraFar = 400;
-					tiro.add(lasglow);
+					}
+					else
+					{
+						var tiro = new THREE.Mesh(laserGeo, laserMaterial);
+						
+						tiro.rotation.set(camera.rotation.x,camera.rotation.y, camera.rotation.z);
+						tiro.position.set(camera.position.x, camera.position.y * 0.6, camera.position.z);
+							//x = Math.PI *1.5;
+
+						//GLOW
+						var lasglow = new THREE.PointLight(0xff0000 ,1 );
+						lasglow.distance = 200;
+						lasglow.width = 60;
+						lasglow.height = 60;
+						//lasglow.castShadow= true;
+						//lasglow.shadowCameraFar = 400;
+						tiro.add(lasglow);
+
+						
+						//FOR MOVING AIM
+						var vector = new THREE.Vector3((LeftMarg+7-50)*window.innerWidth, (50-TopMarg+5)*window.innerHeight, 1);
+						// var vector = new THREE.Vector3((LeftMarg+7)*window.innerWidth, (window.innerHeight- (TopMarg+5)*window.innerHeight), 1);
+						projector.unprojectVector(vector, camera);
+						tiro.ray = new THREE.Ray(
+								camera.position,
+								vector.sub(camera.position).normalize()
+						);
+						
+						tiro.owner = camera;
+						lasers.push(tiro);
+						scene.add(tiro);
+
+						var laserDir = new THREE.Vector3(0,1,0);
+	 					laserDir.applyQuaternion(tiro.quaternion);
+	 					var rayClaser = new THREE.Raycaster(tiro.position, laserDir, 0.5, 15);
+						laserVec.push(laserDir);
+						laserHit.push(rayClaser);
+						
+
+	 
+						return tiro;
+
+					}
 
 					
-					
-					//FOR MOVING AIM
-					var vector = new THREE.Vector3((LeftMarg+7-50)*window.innerWidth, (50-TopMarg+5)*window.innerHeight, 1);
-					// var vector = new THREE.Vector3((LeftMarg+7)*window.innerWidth, (window.innerHeight- (TopMarg+5)*window.innerHeight), 1);
-					projector.unprojectVector(vector, camera);
-					tiro.ray = new THREE.Ray(
-							camera.position,
-							vector.sub(camera.position).normalize()
-					);
-					
-					tiro.owner = camera;
-					lasers.push(tiro);
-					scene.add(tiro);
-
-					var laserDir = new THREE.Vector3(0,1,0);
- 					laserDir.applyQuaternion(tiro.quaternion);
- 					var rayClaser = new THREE.Raycaster(tiro.position, laserDir, 0.5, 15);
-					laserVec.push(laserDir);
-					laserHit.push(rayClaser);
-					
-
- 
-					return tiro;
 		
 				}
 
@@ -1104,17 +1135,53 @@
 
 								//kill bot
 								var killedBot = bots.indexOf(hits[0].object);
-								console.log("HIT A BOT!! " +  killedBot );
-								bots[killedBot].dying = true;
-								botSparks(bots[killedBot], 150);
-								//botDie(killedBot);
-								var die = setTimeout( function(){botDie(killedBot)},2000);
+								
+								if(bots[killedBot].dying== false)
+								{
+									
+									if (bots[killedBot].botType == 1)
+									{	
+										bots[killedBot].dying = true;
+										botSparks(bots[killedBot], 150, 15, 12);
+									//target, ammount of particles, radius, center height
+										var die = setTimeout( function(){botDie(killedBot)},2000);
+										console.log("HIT A BOT!! " +  killedBot );
+									}
+									else if (bots[killedBot].botType == 2 ) 
+									{
+
+										botSparks(bots[killedBot], 175, 25, 20);
+										bots[killedBot].health -=1;
+										if (bots[killedBot].health < 0)
+										{
+											bots[killedBot].dying = true;
+											var die = setTimeout( function(){botDie(killedBot)},2000);
+											console.log("HIT A BOT!! " +  killedBot );
+										}
+
+									//target, ammount of particles, radius, center height
+									};
+								
+								}
 							}
 							if(win.length>0)
 							{
 								//alert("Yey, you won!");
 								var end = setInterval (apocalipse,100);
-								var mySparks =  setTimeout( function(){botSparks(lavaBall, 500)},4000);
+								//glow.color.set(0xff0000);
+
+								var radius = 65;
+								var mySparks =  setTimeout( function(){botSparks(lavaBall, 600, 75, 50);
+									var growSparks = setInterval( function(){ radius += 15;
+										lavaBall.remove(glow);
+										botSparks(lavaBall, 200, radius, 50)
+										if (radius >500)
+										{
+											clearInterval(growSparks);
+										}
+								},250);
+								},4000);
+								//target, ammount of particles, radius, center height
 								var oops =  setTimeout( function(){document.getElementById("subs").innerHTML = "<h2> hmm, my bad</h2>";},1000);
 								var end =  setTimeout( function(){alert("thanks for playing!")},20000);
 
@@ -1136,7 +1203,6 @@
 						if (button.position.x < -228)
 							{
 								buttonMove = false;
-								console.log("done pushing");
 							}
 						button.position.x -=0.2;
 					}
@@ -1158,14 +1224,12 @@
 								havingConversation = true;
 								conversation(1);
 								addBots(botPos1);
-								console.log("chat 1 started");
 							}
 							else if (chatIndex>25 && hadChat1 == true && pushedButton == true)
 							{
 								havingConversation = true;
 								chatIndex = 31	;
 								conversation(2);
-								console.log("chat 2 started");
 							}
 							
 						}
@@ -1226,21 +1290,21 @@
 					{
 						chat.push(["Well done!",1000,1]);
 						chat.push(["Now you must destroy that round thing there!",4000,1]);
-						chat.push(["Why what is it?",2000,2]);
+						chat.push(["Why? what is it?",2000,2]);
 						chat.push(["How the hell would I know??",2000,1]);
 						chat.push(["But it is there for some reason, and you can shoot...  it makes sense",6000,1]);
 						chat.push(["Hey by the way, I wanted to ask...",5000,2]);
 						chat.push(["How can a robot also be a mutant? It has no genes to mutate...",6000,2]);
-						chat.push(["And on that matter, how can a zombi be ninja? It hardly has any control over its body",6000,2]);
+						chat.push(["And on that matter, how can a zombie be ninja? It hardly has any control over its body",6000,2]);
 						chat.push(["You ask way too many questions...",4000,1]);
 						chat.push(["Just shoot already!",5000,1]);
 						chat.push(["Whatever that thing is.. I bet it will look cool when it blows up!",6000,1]);
 						chat.push(["By the way, shoot it a bunch of times because it sometimes is a bit glitchy!",5000,1]);
 						
 						chat.push(["Sure the explosion will not kill us?",6000,2]);
-						chat.push(["Yeah... what a pussy",6000,1]);
+						chat.push(["Yeah... stop being a pussy!",6000,1]);
 						chat.push([" ",3000,1]);
-
+						chat.push([" ",3000,3]);
 					}
 
 					//stay still
@@ -1305,20 +1369,22 @@
 							//dance
 							var firstStep = Math.floor(Math.random()*5)+1;
 							botDance(myBot, firstStep);
+							myBot.position.set( posX, 7, posZ );
 						}
 						else if (thisBot[0] ==2) //big bot
 						{
 							var myBot = new THREE.Sprite( bigBotMaterial1 ); 
-							myBot.scale.set( 50, 50, 1.0 ); 
-							console.log("adding big bot");
+							myBot.scale.set( 60, 60, 1.0 ); 
 							//dance
 							var firstStep = Math.floor(Math.random()*3)+1;
 							bigBotDance(myBot, firstStep);
+							myBot.position.set( posX, 22, posZ );
+							myBot.health = 4;
 						}
 						
 						
 						myBot.botType = thisBot[0];
-						myBot.position.set( posX, 10, posZ );
+						
 						
 						myBot.botVec = new THREE.Vector3(0,0,1);
 						myBot.crash = new THREE.Raycaster(myBot.position, myBot.botVec, 0.5, 10);
@@ -1340,7 +1406,7 @@
 					console.log("removing bot " + killedBot + " " + bots.length + " bots remaining");
 					
 				}
-				function botSparks(killedBot, totalParticles)
+				function botSparks(killedBot, totalParticles, particleRadiusRange, groupHeight)
 				{
 					for( var i = 0; i < totalParticles; i++ ) 
 					{
@@ -1365,7 +1431,7 @@
 					}
 					particleGroup.position.x = killedBot.position.x;
 					particleGroup.position.z = killedBot.position.z;
-					particleGroup.position.y = 12;
+					particleGroup.position.y = groupHeight;
 					scene.add( particleGroup );
 
 				}
@@ -1454,6 +1520,14 @@
 							{
 								//walk 
 							 	bots[i].translateZ(0.3);
+							 	if (bots[i].botType == 1)
+							 	{
+							 		bots[i].position.y = 7;
+							 	}
+							 	else if (bots[i].botType == 2)
+							 	{
+							 		bots[i].position.y = 22;
+							 	}
 							}
 						}
 					}
@@ -1512,5 +1586,7 @@
 				}
 
 		 </script>
+
+		 <script src="js/piwmic-custom.js"></script>
 
 </html>

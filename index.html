@@ -16,7 +16,8 @@
 		<script src="js/THREEx.KeyboardState.js"></script>
 		<script src="js/leap.min.js"></script>	
 		<script src="js/LeapFPControls.js"></script>
-		<script src="js/piwmic.js"></script>
+		<script src="js/dat.gui.min.js"></script>
+		
 
 
 		
@@ -141,6 +142,7 @@
 		    #instructions
 		    {
 		    	opacity: 0;
+		    	margin-top: 5%;
 		    	
 		    }
 
@@ -210,7 +212,7 @@
 	         		</div>
 	         		<div class="span4">
 	         			<img src="img/inst3.png" >
-			 			<h3>3. Shoot!</h3>
+			 			<h3 id="youshoot">3. Shoot!</h3>
 	         		</div>
 	    </div>
 				
@@ -228,7 +230,22 @@
 
 
 				runAnim = true;
+				var briefing = true;  //game not started yet, isntructions only
 
+				//for DAT.GUI
+				var micVars = function()
+				{
+					this.baseSize = 600;
+					this.peeSensitivity = 26;
+					this.wwSensitivity = 15;
+					this.peevswwSpread = 40;
+				}
+				var micV = new micVars();
+				var gui = new dat.GUI();
+				gui.add(micV, "baseSize");
+				gui.add(micV, "peeSensitivity");
+				gui.add(micV, "wwSensitivity");
+				gui.add(micV, "peevswwSpread");
 
 				// set the scene size
 				var WIDTH = window.innerWidth,
@@ -346,24 +363,31 @@
 
 		// Initialize and run on document ready
 		$(document).ready(function() {
+			gui.close();
 
 			$('#intro').one('click', function(e) {
 				
 					e.preventDefault();
-					
 					$(this).fadeOut();
 					$("#instructions").fadeTo("slow",1);
-					
+					testAudio();
 				
 			});
 			$('#instructions').one('click', function(e) {
 				e.preventDefault();
 				$(this).fadeOut();
+				briefing = false;
+				gui.close();
 				init();
 			});
 		});
 
-
+		//in instructions, check that peew works
+		function testAudio()
+		{
+			
+			
+		}
 
 
 
@@ -1003,46 +1027,57 @@
 				{
 					//console.log("PIW");
 
-					var tiro = new THREE.Mesh(laserGeo, laserMaterial);
-					
-					
-					tiro.rotation.set(camera.rotation.x,camera.rotation.y, camera.rotation.z);
-					tiro.position.set(camera.position.x, camera.position.y * 0.6, camera.position.z);
-						//x = Math.PI *1.5;
+					if (briefing == true)
+					{
+						console.log("in briefing");
+						$("#youshoot").css("color","red");
+						var toNormal = myVar=setTimeout(function(){$('#youshoot').css('color','#006699')},300);
 
-					//GLOW
-					var lasglow = new THREE.PointLight(0xff0000 ,1 );
-					lasglow.distance = 200;
-					lasglow.width = 60;
-					lasglow.height = 60;
-					//lasglow.castShadow= true;
-					//lasglow.shadowCameraFar = 400;
-					tiro.add(lasglow);
+					}
+					else
+					{
+						var tiro = new THREE.Mesh(laserGeo, laserMaterial);
+						
+						tiro.rotation.set(camera.rotation.x,camera.rotation.y, camera.rotation.z);
+						tiro.position.set(camera.position.x, camera.position.y * 0.6, camera.position.z);
+							//x = Math.PI *1.5;
+
+						//GLOW
+						var lasglow = new THREE.PointLight(0xff0000 ,1 );
+						lasglow.distance = 200;
+						lasglow.width = 60;
+						lasglow.height = 60;
+						//lasglow.castShadow= true;
+						//lasglow.shadowCameraFar = 400;
+						tiro.add(lasglow);
+
+						
+						//FOR MOVING AIM
+						var vector = new THREE.Vector3((LeftMarg+7-50)*window.innerWidth, (50-TopMarg+5)*window.innerHeight, 1);
+						// var vector = new THREE.Vector3((LeftMarg+7)*window.innerWidth, (window.innerHeight- (TopMarg+5)*window.innerHeight), 1);
+						projector.unprojectVector(vector, camera);
+						tiro.ray = new THREE.Ray(
+								camera.position,
+								vector.sub(camera.position).normalize()
+						);
+						
+						tiro.owner = camera;
+						lasers.push(tiro);
+						scene.add(tiro);
+
+						var laserDir = new THREE.Vector3(0,1,0);
+	 					laserDir.applyQuaternion(tiro.quaternion);
+	 					var rayClaser = new THREE.Raycaster(tiro.position, laserDir, 0.5, 15);
+						laserVec.push(laserDir);
+						laserHit.push(rayClaser);
+						
+
+	 
+						return tiro;
+
+					}
 
 					
-					
-					//FOR MOVING AIM
-					var vector = new THREE.Vector3((LeftMarg+7-50)*window.innerWidth, (50-TopMarg+5)*window.innerHeight, 1);
-					// var vector = new THREE.Vector3((LeftMarg+7)*window.innerWidth, (window.innerHeight- (TopMarg+5)*window.innerHeight), 1);
-					projector.unprojectVector(vector, camera);
-					tiro.ray = new THREE.Ray(
-							camera.position,
-							vector.sub(camera.position).normalize()
-					);
-					
-					tiro.owner = camera;
-					lasers.push(tiro);
-					scene.add(tiro);
-
-					var laserDir = new THREE.Vector3(0,1,0);
- 					laserDir.applyQuaternion(tiro.quaternion);
- 					var rayClaser = new THREE.Raycaster(tiro.position, laserDir, 0.5, 15);
-					laserVec.push(laserDir);
-					laserHit.push(rayClaser);
-					
-
- 
-					return tiro;
 		
 				}
 
@@ -1551,5 +1586,7 @@
 				}
 
 		 </script>
+
+		 <script src="js/piwmic-custom.js"></script>
 
 </html>
